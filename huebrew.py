@@ -43,7 +43,7 @@ class HueBulb(object):
 
 
 def main():
-    parser = argparse.ArgumentParser("Hue to Spacebrew bridge")
+    parser = argparse.ArgumentParser(description="Hue to Spacebrew bridge")
     parser.add_argument("-s", "--server", help="Spacebrew server",
             default="sandbox.spacebrew.cc")
     parser.add_argument("-p", "--port", help="Spacebrew port",
