@@ -19,14 +19,23 @@ class HueBulb(object):
         self._name = name
         self._light = light
         self._old_brightness = -1
+        self._target_brightness = None
         brew.addPublisher(name + " Brightness", "range")
         brew.addSubscriber(name + " Brightness", "range")
+        brew.addSubscriber(name + " Reset", "boolean")
         brew.subscribe(name + " Brightness", self.brightness)
+        brew.subscribe(name + " Reset", self.reset)
 
     def poll(self):
         """ Poll the HUE API for the current state of this bulb
         """
         b = self._light.brightness
+        if self._target_brightness is not None:
+            if b == self._target_brightness:
+                print("%s reached target brightness"%(self._name))
+                self._target_brightness = None
+            else:
+                return
         if b != self._old_brightness:
             print("%s brightness changed to %d"%(self._name, b))
             self._publish("Brightness", b * 4)
@@ -34,9 +43,24 @@ class HueBulb(object):
 
     def brightness(self, value):
         b = int(value)/4 # scale 0-1023 to 0-255
-        print("Set brightness of %s to %d"%(self._name, b))
+        self._target_brightness = b
+        if b == 0:
+            print("Turning %s off"%(self._name))
+            self._light.on = False
+        else:
+            print("Set brightness of %s to %d"%(self._name, b))
+            self._light.on = True
         self._light.brightness = b
-        self._publish("Brightness", b * 4)
+        #self._publish("Brightness", b * 4)
+
+    def reset(self, value):
+        b = bool(value)
+        if b:
+            print("Resetting %s to default"%(self._name))
+            self._light.on = True
+            self._light.brightness = 255
+            self._light.saturation = 0
+            self._target_brightness = 255
 
     def _publish(self, name, value):
         self._brew.publish("%s %s"%(self._name, name), value)
@@ -95,7 +119,7 @@ def main():
             for light in brew_lights:
                 light.poll()
             # chill out man
-            sleep(1)
+            sleep(0.33)
     finally:
         brew.stop()
 
